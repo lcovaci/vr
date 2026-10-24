@@ -1,0 +1,1977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval'
+        https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: blob:
+        https://cdn.jsdelivr.net https://img.icons8.com;
+      media-src 'self';
+      connect-src 'self' data: blob: https://cdn.jsdelivr.net;
+      worker-src 'self' blob:;
+      child-src 'self' blob:;
+      frame-src 'self' ;
+      object-src 'none';
+      base-uri 'self';
+      manifest-src 'self';
+      upgrade-insecure-requests;
+    "
+  >
+
+  <title>NANOlight/EMAT Nanoparticle Lab</title>
+
+  <meta
+    name="description"
+    content="An automatic virtual tour of nanoparticle exhibits."
+  >
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  >
+
+  <script>
+    window.AFRAME_CDN_ROOT =
+      "https://cdn.jsdelivr.net/gh/aframevr/assets@master/";
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.8.0/dist/aframe-master.min.js"></script>
+
+  <script>
+    // Configure Draco before the scene creates its gltf-model system.
+    AFRAME.systems["gltf-model"].prototype.schema
+      .dracoDecoderPath.default =
+        "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/libs/draco/gltf/";
+  </script>
+
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #05080d;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e7f8ff;
+      background:
+        radial-gradient(
+          circle at center,
+          #183343 0%,
+          #071019 65%,
+          #03070b 100%
+        );
+      font-size: clamp(16px, 2vw, 24px);
+      letter-spacing: 0.08em;
+      text-align: center;
+      transition: opacity 800ms ease;
+      pointer-events: none;
+    }
+
+    #loading-overlay.hidden {
+      opacity: 0;
+    }
+
+    #vr-controls {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: max(12px, env(safe-area-inset-left));
+      z-index: 10001;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: min(90vw, 560px);
+    }
+
+    #vr-controls[hidden],
+    #vr-controls button[hidden] {
+      display: none;
+    }
+
+    #vr-controls button {
+      padding: 10px 14px;
+      border: 1px solid #89dfff;
+      border-radius: 8px;
+      background: #092431;
+      color: #fff;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    #vr-controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #vr-status {
+      flex-basis: 100%;
+      margin: 0;
+      color: #fff;
+      font-size: 13px;
+      text-shadow: 0 1px 4px #000;
+    }
+  </style>
+
+  <script>
+    /*
+     * ================================================================
+     * EXHIBIT CONFIGURATION
+     * ================================================================
+     *
+     * Keep these asset paths relative to this HTML file.
+     */
+
+    const EXHIBITS = [
+      {
+        id: "particle1",
+        title: "Melting gold nanoparticle",
+        subtitle: "Au · 50 nm",
+        modelUrl: "./assets/output.glb",
+        animated: true,
+
+        position: [-5, 0, -6],
+        rotationY: 1,
+
+        modelPosition: [0, 2.55, 0],
+        modelRotation: [0, 10, 3],
+        displaySize: 2.3,
+        spinSpeed: 5,
+
+        colors: {
+          pedestal: "#11232d",
+          trim: "#aebcc6",
+          glow: "#dcecff"
+        },
+
+        tour: {
+          position: [-5, 0, -2.7],
+          lookAt: [-5, 1.85, -6],
+          holdSeconds: 38,
+          travelSeconds: 4
+        },
+      },
+
+      {
+        id: "particle2",
+        title: "Chiral gold nanoparticle",
+        subtitle: "50 nm",
+        modelUrl: "./assets/NP_chiral.glb",
+        animated: false,
+
+        position: [0, 0, -6],
+        rotationY: 0,
+
+        modelPosition: [0, 2.55, 0],
+        modelRotation: [0, 0, 0],
+        displaySize: 2,
+        spinSpeed: 5,
+
+        colors: {
+          pedestal: "#18232b",
+          trim: "#aebcc6",
+          glow: "#dcecff"
+        },
+
+        tour: {
+          position: [0, 0, -2.7],
+          lookAt: [0, 1.85, -6],
+          holdSeconds: 38,
+          travelSeconds: 4
+        }
+      },
+
+      {
+        id: "particle3",
+        title: "Gold-Palladium octapod",
+        subtitle: "30nm",
+        modelUrl: "./assets/octapod.glb",
+        animated: false,
+
+        position: [5, 0, -6],
+        rotationY: 0,
+
+        modelPosition: [0, 2.55, 0],
+        modelRotation: [0, 0, 0],
+        displaySize: 2,
+        spinSpeed: 9,
+
+        colors: {
+          pedestal: "#15232d",
+          trim: "#aebcc6",
+          glow: "#dcecff"
+        },
+
+        tour: {
+          position: [5, 0, -2.7],
+          lookAt: [5, 1.85, -6],
+          holdSeconds: 38,
+          travelSeconds: 4
+        }
+      },
+
+      {
+        id: "particle4",
+        title: "Chiral gold nanoparticle",
+        subtitle: "50nm",
+        modelUrl: "./assets/advmat.glb",
+        animated: false,
+
+        position: [7, 0, 0],
+        rotationY: -90,
+
+        modelPosition: [0, 2.55, 0],
+        modelRotation: [0, 0, 0],
+        displaySize: 2.2,
+        spinSpeed: 8,
+
+        colors: {
+          pedestal: "#17242e",
+          trim: "#aebcc6",
+          glow: "#dcecff"
+        },
+
+        tour: {
+          position: [3.7, 0, 0],
+          lookAt: [7, 1.85, 0],
+          holdSeconds: 38,
+          travelSeconds: 4
+        }
+      },
+
+      {
+        id: "particle5",
+        title: "Catalyst Pt nanoparticle",
+        subtitle: "4nm",
+        modelUrl: "./assets/Pt_heat.glb",
+        animated: false,
+
+        position: [0, 0, 6],
+        rotationY: 180,
+
+        modelPosition: [0, 2.55, 0],
+        modelRotation: [0, 0, 0],
+        displaySize: 3.2,
+        spinSpeed: 1,
+
+        colors: {
+          pedestal: "#17242e",
+          trim: "#aebcc6",
+          glow: "#dcecff"
+        },
+
+        tour: {
+          position: [0, 0, 2.7],
+          lookAt: [0, 1.85, 6],
+          holdSeconds: 40,
+          travelSeconds: 4
+        }
+      },
+
+      {
+        id: "particle6",
+        title: "Silver nanocage",
+        subtitle: "5-10nm",
+        modelUrl: "./assets/cage_ag.glb",
+        animated: false,
+
+        position: [-7, 0, 0],
+        rotationY: 20,
+
+        modelPosition: [0, 2.55, 0],
+        modelRotation: [30, 0, 0],
+        displaySize: 2.4,
+        spinSpeed: 3,
+
+        colors: {
+          pedestal: "#17242e",
+          trim: "#aebcc6",
+          glow: "#dcecff"
+        },
+
+        tour: {
+          position: [-3.7, 0, 0],
+          lookAt: [-7, 1.85, 0],
+          holdSeconds: 38,
+          travelSeconds: 4
+        }
+      },
+      {
+        id: "particle7",
+        title: "Nanoparticles in a liquid",
+        subtitle: "Au · 50 nm",
+        modelUrl: "./assets/channel.glb",
+        animated: false,
+
+        position: [-5, 0, 6],
+        rotationY: 1,
+
+        modelPosition: [0, 2.55, 0],
+        modelRotation: [0, 10, 3],
+        displaySize: 3.3,
+        spinSpeed: 5,
+
+        colors: {
+          pedestal: "#11232d",
+          trim: "#aebcc6",
+          glow: "#dcecff"
+        },
+
+        tour: {
+          position: [-5, 0, 3],
+          lookAt: [-5, 1.85, -6],
+          holdSeconds: 38,
+          travelSeconds: 4
+        },
+      },
+            {
+        id: "particle8",
+        title: "CdS nanoparticle assembly",
+        subtitle: "10-20 nm",
+        modelUrl: "./assets/assembly.glb",
+        animated: false,
+
+        position: [5, 0, 6],
+        rotationY: 1,
+
+        modelPosition: [0, 2.55, 0],
+        modelRotation: [0, 10, 3],
+        displaySize: 2.3,
+        spinSpeed: 5,
+
+        colors: {
+          pedestal: "#11232d",
+          trim: "#aebcc6",
+          glow: "#dcecff"
+        },
+
+        tour: {
+          position: [-5, 0, 3],
+          lookAt: [-5, 1.85, -6],
+          holdSeconds: 38,
+          travelSeconds: 4
+        },
+      },
+    ];
+    
+    /*
+ * ================================================================
+ * EXHIBIT LAYOUT
+ * ================================================================
+ *
+ * Preserve the configured pedestal locations.
+ * Point every pedestal/plaque toward the room center.
+ * Place every camera stop on the center-facing side of its pedestal.
+ */
+
+/*
+ * ================================================================
+ * CIRCULAR EXHIBIT LAYOUT
+ * ================================================================
+ */
+
+const LAB_LAYOUT = {
+  exhibitRadius: 8,
+  viewDistance: 3.6,
+  eyeHeight: 1.6,
+  startAngleDegrees: -135
+};
+
+EXHIBITS.forEach((exhibit, index) => {
+  // Also fixes the duplicate particle7 ID in the original file.
+  exhibit.id = `particle${index + 1}`;
+
+  // Space all exhibits evenly around the circle.
+  const angle = THREE.MathUtils.degToRad(
+    LAB_LAYOUT.startAngleDegrees +
+    index * (360 / EXHIBITS.length)
+  );
+
+  const outwardX = Math.cos(angle);
+  const outwardZ = Math.sin(angle);
+
+  const x = outwardX * LAB_LAYOUT.exhibitRadius;
+  const z = outwardZ * LAB_LAYOUT.exhibitRadius;
+
+  exhibit.position = [x, 0, z];
+
+  // Plaques are mounted on local +Z.
+  // Rotate that face toward the room center.
+  exhibit.rotationY = THREE.MathUtils.radToDeg(
+    Math.atan2(-outwardX, -outwardZ)
+  );
+
+  // Camera stops form a smaller circle inside the exhibit circle.
+  const cameraRadius =
+    LAB_LAYOUT.exhibitRadius - LAB_LAYOUT.viewDistance;
+
+  exhibit.tour = {
+    ...exhibit.tour,
+
+    position: [
+      outwardX * cameraRadius,
+      0,
+      outwardZ * cameraRadius
+    ],
+
+    lookAt: [
+      x,
+      LAB_LAYOUT.eyeHeight,
+      z
+    ]
+  };
+});
+
+    const BACKGROUND_PANELS = [
+      {
+        src: "#brandLogo",
+        position: [0, 5.25, 11.88],
+        rotation: [0, 180, 0],
+        width: 5.5,
+        height: 1.4,
+        transparent: false
+      },
+      /*{
+        src: "#backgroundPicture1",
+        position: [-7, 3.8, 11.88],
+        rotation: [0, 180, 0],
+        width: 4,
+        height: 2
+      },
+      {
+        src: "#backgroundPicture2",
+        position: [7, 3.8, 11.88],
+        rotation: [0, 180, 0],
+        width: 4,
+        height: 2
+      },*/
+      {
+        src: "#backgroundPicture3",
+        position: [0, 4, -11.88],
+        rotation: [0, 0, 0],
+        width: 2,
+        height: 2
+      },
+      {
+        src: "#backgroundPicture3",
+        position: [11.88, 3.7, 0],
+        rotation: [0, -90, 0],
+        width: 2,
+        height: 2
+      },
+      {
+        src: "#backgroundPicture3",
+        position: [-11.88, 3.7, 0],
+        rotation: [0, 90, 0],
+        width: 2,
+        height: 2
+      }
+    ];
+
+    function vectorString(vector) {
+      return `${vector[0]} ${vector[1]} ${vector[2]}`;
+    }
+
+    /*
+     * ================================================================
+     * MODEL DIAGNOSTICS
+     * ================================================================
+     */
+
+    AFRAME.registerComponent("model-diagnostics", {
+      init: function () {
+        const started = performance.now();
+
+        this.el.addEventListener("model-loaded", (event) => {
+          console.log("MODEL LOADED", {
+            id: this.el.id,
+            src: this.el.getAttribute("gltf-model"),
+            milliseconds: Math.round(performance.now() - started),
+            model: event.detail.model
+          });
+        });
+
+        this.el.addEventListener("model-error", (event) => {
+          console.error("MODEL ERROR", {
+            id: this.el.id,
+            src: this.el.getAttribute("gltf-model"),
+            milliseconds: Math.round(performance.now() - started),
+            detail: event.detail
+          });
+        });
+      }
+    });
+
+    /*
+     * ================================================================
+     * NANOPARTICLE MODEL
+     * ================================================================
+     */
+
+    AFRAME.registerComponent("nanoparticle-model", {
+      schema: {
+        size: { type: "number", default: 1.4 },
+        spinSpeed: { type: "number", default: 10 }
+      },
+
+      init: function () {
+        this.modelReady = false;
+
+        this.onModelLoaded = (event) => {
+          const model = event.detail.model;
+          if (!model) return;
+
+          model.traverse((object) => {
+            if (!object.isMesh) return;
+
+            object.castShadow = true;
+            object.receiveShadow = false;
+
+            if (object.material) {
+              object.material.needsUpdate = true;
+            }
+          });
+
+          this.el.object3D.updateMatrixWorld(true);
+
+          const bounds = new THREE.Box3().setFromObject(model);
+          const size = new THREE.Vector3();
+          const center = new THREE.Vector3();
+
+          bounds.getSize(size);
+          bounds.getCenter(center);
+
+          const largestDimension = Math.max(
+            size.x,
+            size.y,
+            size.z
+          );
+
+          const localCenter =
+            this.el.object3D.worldToLocal(center.clone());
+
+          model.position.sub(localCenter);
+
+          if (
+            Number.isFinite(largestDimension) &&
+            largestDimension > 0
+          ) {
+            const normalizedScale =
+              this.data.size / largestDimension;
+
+            this.el.object3D.scale.setScalar(normalizedScale);
+          }
+
+          this.el.object3D.updateMatrixWorld(true);
+          this.modelReady = true;
+        };
+
+        this.el.addEventListener(
+          "model-loaded",
+          this.onModelLoaded
+        );
+      },
+
+      tick: function (time, deltaTime) {
+        if (!this.modelReady || !deltaTime) return;
+
+        const radiansPerSecond = THREE.MathUtils.degToRad(
+          this.data.spinSpeed
+        );
+
+        this.el.object3D.rotation.y +=
+          radiansPerSecond * (deltaTime / 1000);
+      },
+
+      remove: function () {
+        this.el.removeEventListener(
+          "model-loaded",
+          this.onModelLoaded
+        );
+      }
+    });
+
+    /*
+     * ================================================================
+     * OPTIONAL GLB ANIMATION
+     * ================================================================
+     */
+
+    AFRAME.registerComponent("auto-animator", {
+      schema: {
+        fps: { type: "number", default: 15 },
+        loop: { type: "boolean", default: true }
+      },
+
+      init: function () {
+        this.frameGroups = [];
+        this.currentFrame = 0;
+        this.lastFrameTime = 0;
+        this.mixer = null;
+
+        this.onModelLoaded = (event) => {
+          const root = event.detail.model;
+          if (!root) return;
+
+          const mesh = this.el.getObject3D("mesh");
+          const animations =
+            root.animations ||
+            (mesh && mesh.animations);
+
+          if (animations && animations.length > 0) {
+            console.log(
+              `[auto-animator] Playing ${animations.length} glTF animation clips.`
+            );
+
+            this.mixer = new THREE.AnimationMixer(root);
+
+            animations.forEach((clip) => {
+              const action = this.mixer.clipAction(clip);
+
+              action.setLoop(
+                this.data.loop
+                  ? THREE.LoopRepeat
+                  : THREE.LoopOnce
+              );
+
+              action.play();
+            });
+
+            return;
+          }
+
+          const groups = new Map();
+
+          root.traverse((child) => {
+            if (!child.isMesh) return;
+
+            child.frustumCulled = false;
+            child.visible = false;
+
+            const match = child.name.match(
+              /(frame[_\s-]?\d+|\d+)/i
+            );
+
+            const frameKey = match
+              ? match[0]
+              : child.name;
+
+            if (!groups.has(frameKey)) {
+              groups.set(frameKey, []);
+            }
+
+            groups.get(frameKey).push(child);
+          });
+
+          const sortedKeys = Array.from(groups.keys()).sort(
+            (a, b) => a.localeCompare(
+              b,
+              undefined,
+              { numeric: true }
+            )
+          );
+
+          this.frameGroups = sortedKeys.map(
+            (key) => groups.get(key)
+          );
+
+          console.log(
+            `[auto-animator] Loaded ${this.frameGroups.length} frames.`
+          );
+
+          if (this.frameGroups.length > 0) {
+            this.frameGroups[0].forEach(
+              (item) => { item.visible = true; }
+            );
+          }
+        };
+
+        this.el.addEventListener(
+          "model-loaded",
+          this.onModelLoaded
+        );
+      },
+
+      tick: function (time, deltaTime) {
+        if (!deltaTime) return;
+
+        if (this.mixer) {
+          this.mixer.update(deltaTime / 1000);
+          return;
+        }
+
+        if (this.frameGroups.length <= 1) return;
+
+        const fps = Math.max(1, this.data.fps || 15);
+        const interval = 1000 / fps;
+
+        if (time - this.lastFrameTime < interval) return;
+
+        this.lastFrameTime = time;
+
+        this.frameGroups[this.currentFrame].forEach(
+          (item) => { item.visible = false; }
+        );
+
+        if (
+          this.currentFrame + 1 <
+          this.frameGroups.length
+        ) {
+          this.currentFrame++;
+        } else if (this.data.loop) {
+          this.currentFrame = 0;
+        } else {
+          this.frameGroups[this.currentFrame].forEach(
+            (item) => { item.visible = true; }
+          );
+          return;
+        }
+
+        this.frameGroups[this.currentFrame].forEach(
+          (item) => { item.visible = true; }
+        );
+      },
+
+      remove: function () {
+        this.el.removeEventListener(
+          "model-loaded",
+          this.onModelLoaded
+        );
+
+        if (this.mixer) {
+          this.mixer.stopAllAction();
+        }
+      }
+    });
+
+    /*
+     * ================================================================
+     * AUTOMATIC LOOPED TOUR
+     * ================================================================
+     *
+     * Move the rig, not the camera, so phone and headset look controls
+     * continue to work.
+     */
+
+    AFRAME.registerComponent("looped-tour", {
+      init: function () {
+        this.stops = [];
+        this.currentIndex = 0;
+        this.nextIndex = 0;
+
+        this.state = "hold";
+        this.elapsed = 0;
+        this.travelDuration = 1;
+        this.active = false;
+
+        this.fromPosition = new THREE.Vector3();
+        this.toPosition = new THREE.Vector3();
+
+        this.fromYaw = 0;
+        this.toYaw = 0;
+      },
+
+      setStops: function (stops) {
+        this.stops = stops.map((stop) => ({
+          position:
+            new THREE.Vector3().fromArray(stop.position),
+
+          lookAt:
+            new THREE.Vector3().fromArray(stop.lookAt),
+
+          holdSeconds: stop.holdSeconds ?? 9,
+          travelSeconds: stop.travelSeconds ?? 4
+        }));
+
+        this.currentIndex = 0;
+        this.nextIndex = 0;
+        this.active = false;
+        this.state = "hold";
+        this.elapsed = 0;
+
+        if (this.stops.length > 0) {
+          this.placeAtStop(0);
+        }
+      },
+
+      start: function () {
+        if (this.stops.length === 0) return;
+
+        this.currentIndex = 0;
+        this.state = "hold";
+        this.elapsed = 0;
+        this.active = true;
+
+        this.placeAtStop(0);
+      },
+
+      calculateYaw: function (position, target) {
+        const direction = target.clone().sub(position);
+
+        return Math.atan2(
+          -direction.x,
+          -direction.z
+        );
+      },
+
+      placeAtStop: function (index) {
+        const stop = this.stops[index];
+        if (!stop) return;
+
+        this.el.object3D.position.copy(stop.position);
+
+        this.el.object3D.rotation.set(
+          0,
+          this.calculateYaw(
+            stop.position,
+            stop.lookAt
+          ),
+          0
+        );
+        
+          this.el.emit(
+            "tour-stop-enter",
+               { index: index },
+            false
+            );
+      },
+
+      beginTransition: function () {
+        const currentStop = this.stops[this.currentIndex];
+
+        this.nextIndex =
+          (this.currentIndex + 1) %
+          this.stops.length;
+
+        const nextStop = this.stops[this.nextIndex];
+
+        this.fromPosition.copy(
+          this.el.object3D.position
+        );
+
+        this.toPosition.copy(nextStop.position);
+
+        this.fromYaw =
+          this.el.object3D.rotation.y;
+
+        this.toYaw = this.calculateYaw(
+          nextStop.position,
+          nextStop.lookAt
+        );
+
+        this.travelDuration = Math.max(
+          currentStop.travelSeconds * 1000,
+          1
+        );
+
+        this.state = "travel";
+        this.elapsed = 0;
+        this.el.emit(
+            "tour-stop-leave",
+            { index: this.currentIndex },
+           false
+        );
+      },
+
+      interpolateAngle: function (from, to, amount) {
+        const difference = Math.atan2(
+          Math.sin(to - from),
+          Math.cos(to - from)
+        );
+
+        return from + difference * amount;
+      },
+
+      smoothStep: function (value) {
+        return value * value * (3 - 2 * value);
+      },
+
+      tick: function (time, deltaTime) {
+        if (
+          !this.active ||
+          !deltaTime ||
+          this.stops.length === 0
+        ) {
+          return;
+        }
+
+        this.elapsed += deltaTime;
+
+        if (this.state === "hold") {
+          const currentStop =
+            this.stops[this.currentIndex];
+
+          if (
+            this.elapsed >=
+            currentStop.holdSeconds * 1000
+          ) {
+            this.beginTransition();
+          }
+
+          return;
+        }
+
+        const progress = Math.min(
+          this.elapsed / this.travelDuration,
+          1
+        );
+
+        const easedProgress =
+          this.smoothStep(progress);
+
+        this.el.object3D.position.lerpVectors(
+          this.fromPosition,
+          this.toPosition,
+          easedProgress
+        );
+
+        this.el.object3D.rotation.y =
+          this.interpolateAngle(
+            this.fromYaw,
+            this.toYaw,
+            easedProgress
+          );
+
+        if (progress >= 1) {
+          this.currentIndex = this.nextIndex;
+          this.state = "hold";
+          this.elapsed = 0;
+
+          this.placeAtStop(this.currentIndex);
+        }
+      }
+    });
+
+    /*
+     * ================================================================
+     * CREATE AN EXHIBIT
+     * ================================================================
+     */
+
+    function createExhibit(exhibit) {
+      return new Promise((resolve) => {
+        const container =
+          document.getElementById("exhibits");
+
+        const exhibitRoot =
+          document.createElement("a-entity");
+
+        exhibitRoot.id = exhibit.id;
+
+        exhibitRoot.setAttribute(
+          "position",
+          vectorString(exhibit.position)
+        );
+
+        exhibitRoot.setAttribute(
+          "rotation",
+          `0 ${exhibit.rotationY || 0} 0`
+        );
+
+        const pedestal =
+          document.createElement("a-cylinder");
+
+        pedestal.setAttribute("position", "0 0.5 0");
+        pedestal.setAttribute("radius", "1.1");
+        pedestal.setAttribute("height", "1");
+        pedestal.setAttribute("segments-radial", "48");
+
+        pedestal.setAttribute("material", {
+          color: exhibit.colors.pedestal,
+          metalness: 0.25,
+          roughness: 0.42
+        });
+
+        pedestal.setAttribute(
+          "shadow",
+          "cast: true; receive: true"
+        );
+
+        const pedestalTop =
+          document.createElement("a-cylinder");
+
+        pedestalTop.setAttribute(
+          "position",
+          "0 1.04 0"
+        );
+
+        pedestalTop.setAttribute("radius", "1.18");
+        pedestalTop.setAttribute("height", "0.12");
+        pedestalTop.setAttribute(
+          "segments-radial",
+          "48"
+        );
+
+        pedestalTop.setAttribute("material", {
+          color: exhibit.colors.trim,
+          metalness: 0.7,
+          roughness: 0.22
+        });
+
+        pedestalTop.setAttribute(
+          "shadow",
+          "cast: true; receive: true"
+        );
+
+        const displayRing =
+          document.createElement("a-torus");
+
+        displayRing.setAttribute(
+          "position",
+          "0 1.14 0"
+        );
+
+        displayRing.setAttribute(
+          "rotation",
+          "90 0 0"
+        );
+
+        displayRing.setAttribute("radius", "0.92");
+        displayRing.setAttribute(
+          "radius-tubular",
+          "0.018"
+        );
+
+        displayRing.setAttribute(
+          "segments-radial",
+          "12"
+        );
+
+        displayRing.setAttribute(
+          "segments-tubular",
+          "64"
+        );
+
+        displayRing.setAttribute("material", {
+          color: exhibit.colors.glow,
+          emissive: exhibit.colors.glow,
+          emissiveIntensity: 1.5,
+          roughness: 0.25
+        });
+
+        const nanoparticle =
+          document.createElement("a-entity");
+
+        nanoparticle.id =
+          `${exhibit.id}-model`;
+
+        nanoparticle.setAttribute(
+          "position",
+          vectorString(
+            exhibit.modelPosition ||
+            [0, 2.05, 0]
+          )
+        );
+
+        nanoparticle.setAttribute(
+          "rotation",
+          vectorString(
+            exhibit.modelRotation ||
+            [0, 0, 0]
+          )
+        );
+
+        nanoparticle.setAttribute(
+          "nanoparticle-model",
+          {
+            size: exhibit.displaySize || 1.4,
+            spinSpeed: exhibit.spinSpeed || 10
+          }
+        );
+
+        nanoparticle.setAttribute(
+          "shadow",
+          "cast: false; receive: false"
+        );
+
+        nanoparticle.setAttribute(
+          "model-diagnostics",
+          ""
+        );
+
+        if (exhibit.animated) {
+          nanoparticle.setAttribute(
+            "auto-animator",
+            "fps: 6; loop: true"
+          );
+        }
+
+        const plaque =
+          document.createElement("a-entity");
+
+        plaque.setAttribute(
+          "position",
+          "0 0.78 1.19"
+        );
+
+        plaque.setAttribute(
+          "rotation",
+          "-10 0 0"
+        );
+        
+        // Reduce the background and both text elements together by 20%.
+plaque.setAttribute(
+  "scale",
+  "0.8 0.8 0.8"
+);
+
+        const plaqueBackground =
+          document.createElement("a-plane");
+
+        plaqueBackground.setAttribute("width", "2.6");
+        plaqueBackground.setAttribute("height", "0.7");
+
+        plaqueBackground.setAttribute("material", {
+          color: "#07141d",
+          opacity: 0.94,
+          transparent: true,
+          metalness: 0.15,
+          roughness: 0.45
+        });
+
+        const title =
+          document.createElement("a-text");
+
+        title.setAttribute(
+          "position",
+          "0 0.12 0.012"
+        );
+
+        title.setAttribute("text", {
+          value: exhibit.title,
+          align: "center",
+          color: "#ffffff",
+          width: 2.3,
+          wrapCount: 28,
+          baseline: "center"
+        });
+
+        const subtitle =
+          document.createElement("a-text");
+
+        subtitle.setAttribute(
+          "position",
+          "0 -0.15 0.013"
+        );
+
+        subtitle.setAttribute("text", {
+          value: exhibit.subtitle || "",
+          align: "center",
+          color: exhibit.colors.glow,
+          width: 2.05,
+          wrapCount: 34,
+          baseline: "center"
+        });
+
+        plaque.appendChild(plaqueBackground);
+        plaque.appendChild(title);
+        plaque.appendChild(subtitle);
+
+        exhibitRoot.appendChild(pedestal);
+        exhibitRoot.appendChild(pedestalTop);
+        exhibitRoot.appendChild(displayRing);
+        exhibitRoot.appendChild(nanoparticle);
+        exhibitRoot.appendChild(plaque);
+
+        let settled = false;
+
+        function finishLoading(success) {
+          if (settled) return;
+
+          settled = true;
+
+          resolve({
+            id: exhibit.id,
+            success: success
+          });
+        }
+
+        nanoparticle.addEventListener(
+          "model-loaded",
+          () => finishLoading(true),
+          { once: true }
+        );
+
+        nanoparticle.addEventListener(
+          "model-error",
+          (event) => {
+            console.error(
+              `Unable to load ${exhibit.modelUrl}`,
+              event.detail
+            );
+
+            finishLoading(false);
+          },
+          { once: true }
+        );
+
+        console.log(
+          "Requesting GLB:",
+          new URL(
+            exhibit.modelUrl,
+            document.baseURI
+          ).href
+        );
+
+        // Install listeners before requesting the model.
+        nanoparticle.setAttribute(
+          "gltf-model",
+          `url(${exhibit.modelUrl})`
+        );
+
+        container.appendChild(exhibitRoot);
+
+        // A missing or stalled model must not block the whole tour.
+        window.setTimeout(
+          () => finishLoading(false),
+          30000
+        );
+      });
+    }
+
+    /*
+     * ================================================================
+     * BACKGROUND PANELS
+     * ================================================================
+     */
+
+    function createBackgroundPanels() {
+      const container =
+        document.getElementById(
+          "background-panels"
+        );
+
+      BACKGROUND_PANELS.forEach((panelData) => {
+        const image =
+          document.createElement("a-image");
+
+        image.setAttribute(
+          "position",
+          vectorString(panelData.position)
+        );
+
+        image.setAttribute(
+          "rotation",
+          vectorString(panelData.rotation)
+        );
+
+        image.setAttribute(
+          "width",
+          panelData.width
+        );
+
+        image.setAttribute(
+          "height",
+          panelData.height
+        );
+
+        image.setAttribute("material", {
+          shader: "flat",
+          src: panelData.src,
+          transparent:
+            panelData.transparent !== false,
+          alphaTest:
+            panelData.transparent === true
+              ? 0.01
+              : 0,
+          side: "double"
+        });
+
+        container.appendChild(image);
+      });
+    }
+
+    /*
+     * ================================================================
+     * HEADSET WEBXR OPTION
+     * ================================================================
+     */
+
+    function setupVROptions(scene) {
+      const controls =
+        document.getElementById("vr-controls");
+
+      const headsetButton =
+        document.getElementById("headset-vr");
+
+      const status =
+        document.getElementById("vr-status");
+
+      async function refreshHeadsetSupport() {
+        let supported = false;
+
+        if (
+          window.isSecureContext &&
+          navigator.xr &&
+          typeof navigator.xr.isSessionSupported ===
+            "function"
+        ) {
+          try {
+            supported =
+              await navigator.xr.isSessionSupported(
+                "immersive-vr"
+              );
+          } catch (error) {
+            console.warn(
+              "Could not check headset VR support:",
+              error
+            );
+          }
+        }
+
+        headsetButton.hidden = !supported;
+
+        if (!scene.is("vr-mode")) {
+          status.textContent =
+            !window.isSecureContext
+              ? "Use HTTPS or localhost for VR and phone motion sensors."
+              : supported
+                ? "Headset VR is available."
+                : "The 3D tour is available; no compatible VR option was detected.";
+        }
+      }
+
+      headsetButton.addEventListener(
+        "click",
+        async () => {
+          try {
+            // An immersive XR session must start from a user click.
+            await scene.enterVR();
+            status.textContent = "";
+          } catch (error) {
+            console.error(
+              "Could not enter headset VR:",
+              error
+            );
+
+            status.textContent =
+              "Headset VR could not start. Check your headset and WebXR browser.";
+
+            if (
+              !scene.renderer.xr.isPresenting
+            ) {
+              scene.renderer.xr.enabled =
+                false;
+            }
+          }
+        }
+      );
+
+      scene.addEventListener(
+        "enter-vr",
+        () => {
+          headsetButton.hidden = true;
+        }
+      );
+
+      scene.addEventListener(
+        "exit-vr",
+        refreshHeadsetSupport
+      );
+
+      if (navigator.xr?.addEventListener) {
+        navigator.xr.addEventListener(
+          "devicechange",
+          refreshHeadsetSupport
+        );
+      }
+
+      controls.hidden = false;
+      refreshHeadsetSupport();
+    }
+
+/*
+ * ================================================================
+ * AUTOMATIC PER-EXHIBIT NARRATION — NO AUDIO BUTTONS
+ * ================================================================
+ */
+
+function setupTourAudio(cameraRig) {
+  const tour = cameraRig.components["looped-tour"];
+  const audio = document.getElementById("tour-narration");
+  const status = document.getElementById("narration-status");
+
+  let playbackRequest = 0;
+  let waitingForInteraction = false;
+
+  audio.muted = false;
+  audio.volume = 1;
+  audio.loop = false;
+
+  function showStatus(message) {
+    status.textContent = message;
+  }
+
+  function stopNarration() {
+    // Invalidate callbacks from previous playback attempts.
+    playbackRequest++;
+
+    waitingForInteraction = false;
+    audio.pause();
+
+    showStatus("");
+  }
+
+  function playCurrentStop(resetHold = false) {
+    if (!tour.active || tour.state !== "hold") {
+      return;
+    }
+
+    const exhibit = EXHIBITS[tour.currentIndex];
+    if (!exhibit) return;
+
+    stopNarration();
+
+    const request = playbackRequest;
+
+    const source = new URL(
+      exhibit.audioUrl ||
+        `./assets/audio/${exhibit.id}.mp3`,
+      document.baseURI
+    ).href;
+
+    audio.src = source;
+
+    showStatus(`Loading narration: ${exhibit.title}…`);
+
+    console.log("[Narration] Requesting:", source);
+
+    // Keep play() directly in the interaction call chain.
+    audio.play()
+      .then(() => {
+        if (request !== playbackRequest) return;
+
+        waitingForInteraction = false;
+
+        showStatus(`Narrating: ${exhibit.title}`);
+
+        console.log("[Narration] Playing:", source);
+
+        // Give the stop its full configured duration when
+        // playback begins following a visitor interaction.
+        if (resetHold && tour.state === "hold") {
+          tour.elapsed = 0;
+        }
+      })
+      .catch((error) => {
+        if (request !== playbackRequest) return;
+
+        if (error.name === "NotAllowedError") {
+          waitingForInteraction = true;
+
+          showStatus(
+            "Click or tap anywhere, or press Enter, to start narration."
+          );
+
+          console.info(
+            "[Narration] Browser blocked playback:",
+            error
+          );
+
+          return;
+        }
+
+        showStatus(
+          `Cannot play narration for ${exhibit.title}. ` +
+          "Check the audio file path and format."
+        );
+
+        console.error("[Narration] Playback failed:", {
+          source,
+          name: error.name,
+          message: error.message
+        });
+      });
+  }
+
+  function retryAfterInteraction(event) {
+    if (!event.isTrusted) return;
+
+    if (
+      event.type === "keydown" &&
+      (
+        event.repeat ||
+        !["Enter", " "].includes(event.key)
+      )
+    ) {
+      return;
+    }
+
+    if (
+      waitingForInteraction &&
+      tour.active &&
+      tour.state === "hold"
+    ) {
+      playCurrentStop(true);
+    }
+  }
+
+  document.addEventListener(
+    "click",
+    retryAfterInteraction,
+    { capture: true }
+  );
+
+  document.addEventListener(
+    "keydown",
+    retryAfterInteraction,
+    { capture: true }
+  );
+
+  cameraRig.addEventListener(
+    "tour-stop-enter",
+    () => playCurrentStop()
+  );
+
+  cameraRig.addEventListener(
+    "tour-stop-leave",
+    stopNarration
+  );
+
+  audio.addEventListener("error", () => {
+    const error = audio.error;
+
+    console.error("[Narration] Media error:", {
+      source: audio.currentSrc || audio.src,
+      code: error?.code,
+      message: error?.message
+    });
+
+    if (tour.active && tour.state === "hold") {
+      showStatus(
+        "Narration file could not be loaded or decoded. " +
+        "Check the browser console for its URL and error."
+      );
+    }
+  });
+
+  console.log("[Narration] Audio listeners installed.");
+}
+
+    /*
+     * ================================================================
+     * START THE LAB
+     * ================================================================
+     */
+
+    async function initializeLab() {
+      const scene =
+        document.querySelector("a-scene");
+
+      const cameraRig =
+        document.getElementById("camera-rig");
+
+      const tourComponent =
+        cameraRig.components["looped-tour"];
+
+      tourComponent.setStops(
+        EXHIBITS.map(
+          (exhibit) => exhibit.tour
+        )
+      );
+
+      createBackgroundPanels();
+
+      const loadResults = await Promise.all(
+        EXHIBITS.map(createExhibit)
+      );
+
+      const failedModels = loadResults.filter(
+        (result) => !result.success
+      );
+
+      if (failedModels.length > 0) {
+        console.warn(
+          "Some nanoparticle models did not load:",
+          failedModels.map(
+            (item) => item.id
+          )
+        );
+      }
+      setupTourAudio(cameraRig);
+     
+
+      setupVROptions(scene);
+      
+       tourComponent.start();
+
+      const loadingOverlay =
+        document.getElementById(
+          "loading-overlay"
+        );
+
+      loadingOverlay.classList.add(
+        "hidden"
+      );
+
+      window.setTimeout(
+        () => loadingOverlay.remove(),
+        900
+      );
+  
+    }
+
+    window.addEventListener(
+      "DOMContentLoaded",
+      () => {
+        const scene =
+          document.querySelector("a-scene");
+
+        if (scene.hasLoaded) {
+          initializeLab();
+        } else {
+          scene.addEventListener(
+            "loaded",
+            initializeLab,
+            { once: true }
+          );
+        }
+      }
+    );
+    
+    AFRAME.registerComponent("exhibit-spotlights", {
+  init: function () {
+    const container = this.el;
+
+    const settings = {
+      mountingRadius: 3,
+      mountingHeight: 5.8,
+      targetHeight: 1.3,
+      intensity: 3,
+      angle: 20,
+      penumbra: 0.15
+    };
+
+    EXHIBITS.forEach((exhibit, index) => {
+      const [x, , z] = exhibit.position;
+      const radius = Math.hypot(x, z);
+
+      if (radius < 0.001) return;
+
+      // Mount each spotlight near the center,
+      // on the same radial line as its exhibit.
+      const lightX = (x / radius) * settings.mountingRadius;
+      const lightZ = (z / radius) * settings.mountingRadius;
+
+      // Invisible aiming point at the exhibit.
+      const target = document.createElement("a-entity");
+      const targetId = `exhibit-light-target-${index}`;
+
+      target.id = targetId;
+      target.setAttribute("position", {
+        x,
+        y: settings.targetHeight,
+        z
+      });
+
+      container.appendChild(target);
+
+      // Dedicated outward-facing spotlight.
+      const spotlight = document.createElement("a-entity");
+
+      spotlight.setAttribute("position", {
+        x: lightX,
+        y: settings.mountingHeight,
+        z: lightZ
+      });
+
+      container.appendChild(spotlight);
+      
+      // Visible lamp marker at the spotlight's position.
+const fixture = document.createElement("a-sphere");
+
+fixture.setAttribute("position", {
+  x: lightX,
+  y: settings.mountingHeight,
+  z: lightZ
+});
+
+fixture.setAttribute("radius", 0.12);
+
+fixture.setAttribute("material", {
+  shader: "flat",
+  color: "#fff4e6"
+});
+
+container.appendChild(fixture);
+
+      spotlight.setAttribute("light", {
+        type: "spot",
+        target: `#${targetId}`,
+        color: "#fff4e6",
+        intensity: settings.intensity,
+        angle: settings.angle,
+        penumbra: settings.penumbra,
+        distance: 15,
+        decay: 0,
+        castShadow: false
+      });
+    });
+  }
+});
+  </script>
+</head>
+
+<body>
+  <div id="loading-overlay">
+    Loading Nanoparticle Lab
+  </div>
+
+  <div
+    id="vr-controls"
+    aria-label="VR options"
+    hidden
+  >
+    <button
+      id="headset-vr"
+      type="button"
+      hidden
+    >
+      Enter headset VR
+    </button>
+
+    <p
+      id="vr-status"
+      role="status"
+      aria-live="polite"
+    >
+      Loading tour…
+    </p>
+  </div>
+  <audio
+  id="tour-narration"
+  preload="none"
+  hidden
+></audio>
+
+<p
+  id="narration-status"
+  role="status"
+  aria-live="polite"
+></p>
+  <a-scene
+    background="color: #F1F5F9"
+    renderer="
+      antialias: true;
+      colorManagement: true;
+      sortObjects: true
+    "
+    shadow="type: pcf"
+    light="defaultLightsEnabled: false"
+    fog="
+      type: exponential;
+      color: #F1F5F9;
+      density: 0.006
+    "
+    loading-screen="enabled: false"
+    xr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: true"
+  >
+    <!-- Replace these paths with your own files as needed. -->
+    <a-assets timeout="60000">
+      <img
+        id="floorTexture"
+        src="./assets/textures/laboratory-floor.jpg"
+        crossorigin="anonymous"
+      >
+
+      <img
+        id="brandLogo"
+        src="./assets/images/emat.jpg"
+        crossorigin="anonymous"
+      >
+
+      <img
+        id="backgroundPicture1"
+        src="./assets/images/chiral.png"
+        crossorigin="anonymous"
+      >
+
+      <img
+        id="backgroundPicture2"
+        src="./assets/images/Ptnp.png"
+        crossorigin="anonymous"
+      >
+
+      <img
+        id="backgroundPicture3"
+        src="./assets/images/nano_4.png"
+        crossorigin="anonymous"
+      >
+
+      <img
+        id="backgroundPicture4"
+        src="./assets/images/nano_4.png"
+        crossorigin="anonymous"
+      >
+    </a-assets>
+
+    <!-- ROOM -->
+<!-- CIRCULAR ROOM: radius 13 m, height 7 m -->
+<a-entity id="room">
+
+  <!-- Floor: top surface sits at y = 0 -->
+  <a-cylinder
+    position="0 -0.06 0"
+    radius="13"
+    height="0.12"
+    segments-radial="128"
+    segments-height="1"
+    material="
+      shader: standard;
+      color: #F1F5F9;
+      metalness: 0.08;
+      roughness: 0.82
+    "
+    shadow="receive: true"
+  ></a-cylinder>
+
+  <!-- Continuous circular wall, visible from inside -->
+  <a-cylinder
+    position="0 3.5 0"
+    radius="13"
+    height="7"
+    open-ended="true"
+    segments-radial="128"
+    segments-height="1"
+    material="
+      shader: standard;
+      side: back;
+      color: #F1F5F9;
+      metalness: 0.05;
+      roughness: 0.88
+    "
+    shadow="receive: true"
+  ></a-cylinder>
+
+  <!-- Ceiling: lower surface sits at y = 7 -->
+  <a-cylinder
+    position="0 7.04 0"
+    radius="13"
+    height="0.08"
+    segments-radial="128"
+    segments-height="1"
+    material="
+      shader: standard;
+      color: #09141c;
+      metalness: 0;
+      roughness: 0.92
+    "
+  ></a-cylinder>
+
+  <!-- Circular baseboard -->
+  <a-cylinder
+    position="0 0.12 0"
+    radius="12.97"
+    height="0.24"
+    open-ended="true"
+    segments-radial="128"
+    segments-height="1"
+    material="
+      shader: standard;
+      side: back;
+      color: #17242e;
+      metalness: 0.35;
+      roughness: 0.45
+    "
+  ></a-cylinder>
+
+  <!-- Outer ceiling light ring -->
+  <a-torus
+    position="0 6.88 0"
+    rotation="90 0 0"
+    radius="11.8"
+    radius-tubular="0.045"
+    segments-radial="8"
+    segments-tubular="128"
+    material="
+      shader: standard;
+      color: #6cdfff;
+      emissive: #6cdfff;
+      emissiveIntensity: 2.2;
+      metalness: 0;
+      roughness: 0.4
+    "
+  ></a-torus>
+
+  <!-- Inner ceiling light ring -->
+  <a-torus
+    position="0 6.88 0"
+    rotation="90 0 0"
+    radius="5"
+    radius-tubular="0.035"
+    segments-radial="8"
+    segments-tubular="96"
+    material="
+      shader: standard;
+      color: #6cdfff;
+      emissive: #6cdfff;
+      emissiveIntensity: 2.2;
+      metalness: 0;
+      roughness: 0.4
+    "
+  ></a-torus>
+
+</a-entity>
+
+    <a-entity id="background-panels"></a-entity>
+    <a-entity id="exhibits"></a-entity>
+
+    <!-- LIGHTING -->
+<!-- CENTER-OUTWARD GALLERY LIGHTING -->
+
+
+<!-- One outward-facing spotlight per exhibit -->
+<a-entity
+  id="gallery-spotlights"
+  exhibit-spotlights
+></a-entity>
+
+<!-- Soft fill for surfaces outside the spotlight beams -->
+<a-entity
+  light="
+    type: ambient;
+    color: #cbdcff;
+    intensity: 0.5
+  "
+></a-entity>
+
+    <!-- CAMERA RIG: the automatic tour moves this entity. -->
+    <a-entity
+      id="camera-rig"
+      looped-tour=""
+    >
+      <a-camera
+        id="tour-camera"
+        position="0 1.6 0"
+        camera="
+          near: 0.05;
+          far: 100;
+          fov: 70
+        "
+        look-controls="
+          enabled: true;
+          pointerLockEnabled: false;
+          reverseMouseDrag: false;
+          magicWindowTrackingEnabled: true
+        "
+        wasd-controls="enabled: false"
+      ></a-camera>
+    </a-entity>
+  </a-scene>
+</body>
+</html>
